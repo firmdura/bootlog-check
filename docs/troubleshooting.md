@@ -34,6 +34,11 @@ Preserve the original capture; do not invent timestamps to make a check pass.
 
 ## Timestamps go backward
 
+Compare the two lines named in the error. For example, `invalid input at line 6
+(timestamp_ns): must be nondecreasing; previous timestamp at line 3` means
+line 6 has an earlier timestamp than line 3. Blank or untimed lines between
+them still count toward the line numbers.
+
 Check for concatenated boots, a reboot, mixed clocks, or messages captured out
 of order. v1.0 expects a single boot with timestamps from one clock. It does not
 reorder messages or split a file into separate boots.

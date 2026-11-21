@@ -3,6 +3,7 @@ package bootlog_test
 import (
 	"context"
 	"errors"
+	"fmt"
 	"math"
 	"reflect"
 	"strings"
@@ -98,13 +99,21 @@ func TestParseLogInvalidTimestamps(t *testing.T) {
 }
 
 func TestParseLogTimestampOrder(t *testing.T) {
-	for _, input := range []string{
-		"[2] bootloader\n\nuntimed\n[1] Linux version",
-		"[0] Linux version\n[2] APP_READY\n[1] reboot",
-		"[1.000000001]\n[1.000000000]",
+	for _, tc := range []struct {
+		input          string
+		line, previous int64
+	}{
+		{"[2] bootloader\n\nuntimed\n[1] Linux version", 4, 1},
+		{"[0] Linux version\n[2] APP_READY\n[2] same time\r\nuntimed\r\n\n[1] reboot\n", 6, 3},
+		{"[1.000000001]\n[1.000000000]", 2, 1},
 	} {
-		log, err := bootlog.ParseLog(context.Background(), strings.NewReader(input), bootlog.ParseOptions{})
+		log, err := bootlog.ParseLog(context.Background(), strings.NewReader(tc.input), bootlog.ParseOptions{})
 		assertParserFailure(t, log, err, bootlog.ErrInvalidInput)
+		var invalid *bootlog.InvalidInputError
+		if !errors.As(err, &invalid) || invalid.Line != tc.line || invalid.Field != "timestamp_ns" ||
+			!strings.Contains(invalid.Detail, fmt.Sprintf("previous timestamp at line %d", tc.previous)) {
+			t.Errorf("want timestamp error at line %d referring to line %d, got %v", tc.line, tc.previous, err)
+		}
 	}
 	log, err := bootlog.ParseLog(context.Background(), strings.NewReader("[1] preamble\nuntimed\n[1] Linux version\n[1.000000001] next"), bootlog.ParseOptions{})
 	if err != nil || len(log.Records) != 4 || log.Records[1].TimestampNS != nil || *log.Records[0].TimestampNS != 1_000_000_000 || *log.Records[3].TimestampNS != 1_000_000_001 {

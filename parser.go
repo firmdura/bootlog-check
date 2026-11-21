@@ -25,7 +25,8 @@ func ParseLog(ctx context.Context, r io.Reader, opts ParseOptions) (Log, error) 
 	}
 	var log Log
 	var line []byte
-	var inputBytes, lineNumber, previousTime int64
+	var inputBytes, lineNumber int64
+	var previous timedLine
 	atLineStart := true
 	emptyReads := 0
 	var buffer [4096]byte
@@ -75,7 +76,7 @@ func ParseLog(ctx context.Context, r io.Reader, opts ParseOptions) (Log, error) 
 				if len(content) > 0 && content[len(content)-1] == '\r' {
 					content = content[:len(content)-1]
 				}
-				if err := appendLogLine(&log, content, lineNumber, &previousTime); err != nil {
+				if err := appendLogLine(&log, content, lineNumber, &previous); err != nil {
 					return Log{}, err
 				}
 				line = line[:0]
@@ -94,7 +95,7 @@ func ParseLog(ctx context.Context, r io.Reader, opts ParseOptions) (Log, error) 
 				return Log{}, lineTooLong(lineNumber, opts.MaxLineBytes)
 			}
 			if !atLineStart {
-				if err := appendLogLine(&log, line, lineNumber, &previousTime); err != nil {
+				if err := appendLogLine(&log, line, lineNumber, &previous); err != nil {
 					return Log{}, err
 				}
 			}
@@ -107,7 +108,11 @@ func lineTooLong(lineNumber, maxBytes int64) error {
 	return fmt.Errorf("line %d: %w", lineNumber, &LimitError{Resource: "max_line_bytes", Limit: maxBytes})
 }
 
-func appendLogLine(log *Log, line []byte, lineNumber int64, previousTime *int64) error {
+type timedLine struct {
+	number, ns int64
+}
+
+func appendLogLine(log *Log, line []byte, lineNumber int64, previous *timedLine) error {
 	if len(line) == 0 {
 		return nil
 	}
@@ -119,10 +124,14 @@ func appendLogLine(log *Log, line []byte, lineNumber int64, previousTime *int64)
 		return err
 	}
 	if timestamp != nil {
-		if *timestamp < *previousTime {
-			return &InvalidInputError{Line: lineNumber, Field: "timestamp_ns", Detail: "must be nondecreasing"}
+		if previous.number != 0 && *timestamp < previous.ns {
+			return &InvalidInputError{
+				Line:   lineNumber,
+				Field:  "timestamp_ns",
+				Detail: fmt.Sprintf("must be nondecreasing; previous timestamp at line %d", previous.number),
+			}
 		}
-		*previousTime = *timestamp
+		*previous = timedLine{number: lineNumber, ns: *timestamp}
 	}
 	log.Records = append(log.Records, Record{Line: lineNumber, TimestampNS: timestamp, Message: string(message)})
 	return nil
