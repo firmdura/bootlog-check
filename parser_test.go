@@ -203,6 +203,27 @@ func TestParseLogLineLimitReportsPhysicalLine(t *testing.T) {
 	}
 }
 
+func TestParseLogInvalidUTF8Location(t *testing.T) {
+	for _, tc := range []struct {
+		name, input string
+		line, pos   int64
+	}{
+		{"first byte", "\xfftext\xff\n", 1, 1},
+		{"after timestamp and multibyte text", "header\r\n\r\n[1] é\uFFFD\xff\xff\r\n", 3, 10},
+		{"incomplete sequence at EOF", "[0] OK\nend \xe2\x82", 2, 5},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			log, err := bootlog.ParseLog(context.Background(), &parserChunkReader{input: []byte(tc.input), chunk: 1}, bootlog.ParseOptions{})
+			assertParserFailure(t, log, err, bootlog.ErrInvalidInput)
+			var invalid *bootlog.InvalidInputError
+			want := fmt.Sprintf("must be valid UTF-8; invalid sequence starts at byte %d", tc.pos)
+			if !errors.As(err, &invalid) || invalid.Line != tc.line || invalid.Field != "message" || invalid.Detail != want {
+				t.Errorf("want encoding error at line %d, byte %d; got %v", tc.line, tc.pos, err)
+			}
+		})
+	}
+}
+
 func TestParseLogLateFailures(t *testing.T) {
 	prefix := "[0] Linux version\n[1] APP_READY\n"
 	for _, suffix := range []string{"[+2] bad", "[2.0000000000] bad", "invalid\xff", "\xc3"} {

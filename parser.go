@@ -117,7 +117,19 @@ func appendLogLine(log *Log, line []byte, lineNumber int64, previous *timedLine)
 		return nil
 	}
 	if !utf8.Valid(line) {
-		return &InvalidInputError{Line: lineNumber, Field: "message", Detail: "must be valid UTF-8"}
+		offset := 0
+		for offset < len(line) {
+			r, size := utf8.DecodeRune(line[offset:])
+			if r == utf8.RuneError && size == 1 {
+				break
+			}
+			offset += size
+		}
+		return &InvalidInputError{
+			Line:   lineNumber,
+			Field:  "message",
+			Detail: fmt.Sprintf("must be valid UTF-8; invalid sequence starts at byte %d", offset+1),
+		}
 	}
 	timestamp, message, err := parseLogTimestamp(line, lineNumber)
 	if err != nil {

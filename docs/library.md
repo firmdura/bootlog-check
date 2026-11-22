@@ -40,14 +40,14 @@ bootlog_consumer=$(mktemp -d)
 cp "$bootlog_source/examples/library/main.go" "$bootlog_consumer/main.go"
 cd "$bootlog_consumer"
 go mod init example.com/bootlog-consumer
-go get github.com/firmdura/bootlog-check@v1.0.5
+go get github.com/firmdura/bootlog-check@v1.0.6
 go run .
 cd "$bootlog_source"
 ```
 
 These commands download the module and run the program, which prints a passing
 text report for a synthetic log. The ready message appears exactly at its
-deadline. `@v1.0.5` pins this release in `go.mod`; keep the consumer project's
+deadline. `@v1.0.6` pins this release in `go.mod`; keep the consumer project's
 module files so the example can be reproduced. Downloading requires network
 access. Once Go and the module are installed, checks can run offline.
 

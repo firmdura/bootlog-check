@@ -19,7 +19,7 @@ devices, diagnose failures, or separate a file into multiple boots.
 ## Installation
 
 Prebuilt CLI archives for Linux and macOS on amd64 and arm64 are available from
-the [v1.0.5 release](https://github.com/firmdura/bootlog-check/releases/tag/v1.0.5).
+the [v1.0.6 release](https://github.com/firmdura/bootlog-check/releases/tag/v1.0.6).
 Download the archive for your operating system and CPU architecture. Check its
 SHA-256 checksum against `SHA256SUMS`, then extract `bootlog-check` into a directory
 on your `PATH`. The archives have no publisher signature; macOS binaries are not
@@ -34,18 +34,18 @@ library.
 Install the CLI with Go:
 
 ```sh
-go install github.com/firmdura/bootlog-check/cmd/bootlog-check@v1.0.5
+go install github.com/firmdura/bootlog-check/cmd/bootlog-check@v1.0.6
 ```
 
 The executable goes into `GOBIN`, or `$(go env GOPATH)/bin` when `GOBIN` is unset.
-Add that directory to your `PATH`. `@v1.0.5` selects this release, and
-`bootlog-check --version` prints `bootlog-check 1.0.5`. The repository is public;
+Add that directory to your `PATH`. `@v1.0.6` selects this release, and
+`bootlog-check --version` prints `bootlog-check 1.0.6`. The repository is public;
 no GitHub credentials or private-module configuration are needed.
 
 To build and verify a source checkout instead, run:
 
 ```sh
-git clone --branch v1.0.5 https://github.com/firmdura/bootlog-check.git
+git clone --branch v1.0.6 https://github.com/firmdura/bootlog-check.git
 cd bootlog-check
 ./scripts/verify.sh
 ./bin/bootlog-check --help

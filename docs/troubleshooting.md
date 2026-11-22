@@ -96,8 +96,10 @@ limits are fixed. See the [CLI reference](usage.md#cli-reference).
 
 ## The input contains invalid UTF-8
 
-Keep the original capture and inspect its encoding or look for corruption.
-bootlog-check accepts UTF-8 only and does not replace invalid bytes silently.
+Inspect the reported line in a hex viewer. The error gives the first byte of
+the invalid sequence, counting from 1 at the start of that line, including any
+timestamp prefix. Count bytes, not displayed characters. Keep the original
+capture; bootlog-check does not replace invalid bytes.
 
 ## Library parsing is canceled or stuck in a read
 
