@@ -219,3 +219,19 @@ func TestLogValidateDoesNotReapplyParserCaps(t *testing.T) {
 		t.Fatalf("caller-owned log exceeding default line cap rejected: %v", err)
 	}
 }
+
+func TestLogValidateDoesNotAllocatePerRecord(t *testing.T) {
+	log := bootlog.Log{Records: make([]bootlog.Record, 1024)}
+	timestamp := int64(1)
+	for i := range log.Records {
+		log.Records[i] = bootlog.Record{Line: int64(i + 1), TimestampNS: &timestamp, Message: "console ready"}
+	}
+	allocs := testing.AllocsPerRun(5, func() {
+		if err := log.Validate(); err != nil {
+			t.Fatal(err)
+		}
+	})
+	if allocs > 1 {
+		t.Fatalf("validating %d records took %.0f allocations; want at most 1", len(log.Records), allocs)
+	}
+}

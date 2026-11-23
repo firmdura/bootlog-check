@@ -40,14 +40,14 @@ bootlog_consumer=$(mktemp -d)
 cp "$bootlog_source/examples/library/main.go" "$bootlog_consumer/main.go"
 cd "$bootlog_consumer"
 go mod init example.com/bootlog-consumer
-go get github.com/firmdura/bootlog-check@v1.0.6
+go get github.com/firmdura/bootlog-check@v1.0.7
 go run .
 cd "$bootlog_source"
 ```
 
 These commands download the module and run the program, which prints a passing
 text report for a synthetic log. The ready message appears exactly at its
-deadline. `@v1.0.6` pins this release in `go.mod`; keep the consumer project's
+deadline. `@v1.0.7` pins this release in `go.mod`; keep the consumer project's
 module files so the example can be reproduced. Downloading requires network
 access. Once Go and the module are installed, checks can run offline.
 
@@ -136,11 +136,13 @@ If a trusted log exceeds a limit, raise only the limit it needs. The input-byte
 cap includes line terminators, and the line count includes empty lines. Per-line
 bytes exclude LF or CRLF.
 
-`Evaluate` validates the log's structure without reapplying the default parsing
-limits. A log parsed with higher limits therefore remains valid. If you build a
-`Log` directly, you are responsible for bounding its size and memory use. Rules
-are capped at 128 user rules and 4,096 UTF-8 bytes per expression; parsed rule
-documents are capped at 1 MiB.
+`Evaluate` calls `Log.Validate`; calling it yourself immediately beforehand
+scans the same records twice. Validation formats field names such as
+`records[42].message` only when it finds an error. It does not reapply the
+default parsing limits, so a log parsed with higher limits remains valid.
+If you build a `Log` directly, you are responsible for bounding its size and
+memory use. Rules are capped at 128 user rules and 4,096 UTF-8 bytes per
+expression; parsed rule documents are capped at 1 MiB.
 
 `ParseLog` checks for context cancellation between reads. If an `io.Reader` is
 already blocked in `Read`, canceling the context cannot interrupt it. Use the

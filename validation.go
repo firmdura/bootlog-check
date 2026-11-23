@@ -11,16 +11,24 @@ import (
 func (l Log) Validate() error {
 	var previousLine, previousTime int64
 	for i, record := range l.Records {
-		field := fmt.Sprintf("records[%d]", i)
 		if record.Line <= previousLine {
-			return &InvalidInputError{Line: record.Line, Field: field + ".line", Detail: "must be positive and strictly increasing"}
+			return &InvalidInputError{
+				Line: record.Line, Field: fmt.Sprintf("records[%d].line", i),
+				Detail: "must be positive and strictly increasing",
+			}
 		}
 		if !utf8.ValidString(record.Message) {
-			return &InvalidInputError{Line: record.Line, Field: field + ".message", Detail: "must be valid UTF-8"}
+			return &InvalidInputError{
+				Line: record.Line, Field: fmt.Sprintf("records[%d].message", i),
+				Detail: "must be valid UTF-8",
+			}
 		}
 		if record.TimestampNS != nil {
 			if *record.TimestampNS < previousTime {
-				return &InvalidInputError{Line: record.Line, Field: field + ".timestamp_ns", Detail: "must be nonnegative and nondecreasing"}
+				return &InvalidInputError{
+					Line: record.Line, Field: fmt.Sprintf("records[%d].timestamp_ns", i),
+					Detail: "must be nonnegative and nondecreasing",
+				}
 			}
 			previousTime = *record.TimestampNS
 		}
