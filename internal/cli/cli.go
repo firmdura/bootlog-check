@@ -16,7 +16,7 @@ import (
 )
 
 // Version is the command's release version.
-const Version = "1.0.7"
+const Version = "1.0.8"
 
 // File is a caller-supplied input file. Run checks that Stat describes a regular
 // file and closes each successfully opened input, including on errors.

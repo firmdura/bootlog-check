@@ -78,6 +78,12 @@ readiness. Input validation also continues to the end of the file.
 
 ## The rules file or a pattern is rejected
 
+For a JSON syntax error such as a missing comma, inspect the reported line and
+byte column. Both start at 1; a multibyte UTF-8 character takes more than one
+column. The location marks where the decoder could not continue, so a missing
+comma between fields may point to the opening quote of the next field. An
+unexpected end of input points just past the last byte.
+
 Check `schema_version`, required fields, unique rule IDs, and JSON value types.
 Unknown fields, duplicate keys, explicit `null` values, and trailing JSON are
 invalid. Patterns use Go regular-expression syntax and must not match an empty

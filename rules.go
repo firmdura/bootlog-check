@@ -3,6 +3,7 @@ package bootlog
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"unicode/utf8"
@@ -28,7 +29,7 @@ func ParseRules(r io.Reader) (Config, error) {
 	}
 	fields, err := ruleObject(data, "", "schema_version", "boot_start", "milestones", "forbidden")
 	if err != nil {
-		return Config{}, err
+		return Config{}, locateRulesSyntaxError(data, err)
 	}
 	var cfg Config
 	if err := ruleValue(fields, "schema_version", "schema_version", true, &cfg.SchemaVersion); err != nil {
@@ -96,6 +97,29 @@ func ParseRules(r io.Reader) (Config, error) {
 
 func rulesError(field, detail string, err error) error {
 	return &InvalidRulesError{Field: field, Detail: detail, Err: err}
+}
+
+func locateRulesSyntaxError(data []byte, err error) error {
+	var syntax *json.SyntaxError
+	if !errors.As(err, &syntax) && !errors.Is(err, io.EOF) && !errors.Is(err, io.ErrUnexpectedEOF) {
+		return err
+	}
+	// Token and Decode errors from individual fields need not carry a
+	// document-relative offset. Rescan only a rejected, size-bounded document.
+	dec := json.NewDecoder(bytes.NewReader(data))
+	var raw json.RawMessage
+	offset := len(data) // An unfinished document points just past the last byte.
+	switch scanErr := dec.Decode(&raw); {
+	case errors.As(scanErr, &syntax):
+		offset = int(syntax.Offset - 1)
+	case scanErr == nil:
+		// The first value was complete; point to the unexpected trailing data.
+		offset -= len(bytes.TrimLeft(data[dec.InputOffset():], " \t\r\n"))
+	}
+	before := data[:offset]
+	line := 1 + bytes.Count(before, []byte{'\n'})
+	column := offset - bytes.LastIndexByte(before, '\n')
+	return fmt.Errorf("%w (line %d, byte column %d)", err, line, column)
 }
 
 // Read keys individually: encoding/json's struct and map decoders accept duplicate

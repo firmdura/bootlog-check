@@ -47,6 +47,32 @@ func TestParseRulesValid(t *testing.T) {
 	}
 }
 
+func TestParseRulesSyntaxLocation(t *testing.T) {
+	for _, tc := range []struct {
+		name, document, location string
+		end                      error
+	}{
+		{"missing comma", "{\n  \"schema_version\": 1\n  \"boot_start\": {}\n}", "line 3, byte column 3", nil},
+		{"nested value after UTF-8", "{\r\n  \"boot_start\": {\"pattern\": \"café\"!}\r\n}", "line 2, byte column 36", nil},
+		{"trailing punctuation", rulesMinimalJSON + "\r\n  !", "line 2, byte column 3", nil},
+		{"unfinished value", "{\n  \"boot_start\": {\n", "line 3, byte column 1", io.ErrUnexpectedEOF},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			cfg, err := bootlog.ParseRules(strings.NewReader(tc.document))
+			if !errors.Is(err, bootlog.ErrInvalidRules) || !strings.Contains(err.Error(), tc.location) {
+				t.Fatalf("error = %v, want invalid rules at %s", err, tc.location)
+			}
+			if !reflect.DeepEqual(cfg, bootlog.Config{}) {
+				t.Fatalf("partial config: %#v", cfg)
+			}
+			var syntax *json.SyntaxError
+			if tc.end != nil && !errors.Is(err, tc.end) || tc.end == nil && !errors.As(err, &syntax) {
+				t.Fatalf("lost JSON decoder error: %v", err)
+			}
+		})
+	}
+}
+
 func TestParseRulesRejectsSyntaxAndSchema(t *testing.T) {
 	cases := map[string]string{
 		"empty": "", "truncated": `{`, "top null": `null`, "top array": `[]`,
