@@ -262,6 +262,10 @@ stdin, URLs, compressed archives, and device ports are unsupported. Use shell
 redirection to save reports. Limits use decimal counts or byte counts. `--help`
 (or `-h`) and `--version` need no inputs and return exit code 0.
 
+Since v1.1.0, `bootlog-check --check-rules FILE` validates the rule file
+without a log. It takes no other flags and emits no report. Valid rules exit
+0; an error exits 2. The table below applies when evaluating a capture.
+
 | Exit code | Meaning |
 | --- | --- |
 | 0 | All checks passed. |

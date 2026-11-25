@@ -19,7 +19,7 @@ devices, diagnose failures, or separate a file into multiple boots.
 ## Installation
 
 Prebuilt CLI archives for Linux and macOS on amd64 and arm64 are available from
-the [v1.0.8 release](https://github.com/firmdura/bootlog-check/releases/tag/v1.0.8).
+the [v1.1.0 release](https://github.com/firmdura/bootlog-check/releases/tag/v1.1.0).
 Download the archive for your operating system and CPU architecture. Check its
 SHA-256 checksum against `SHA256SUMS`, then extract `bootlog-check` into a directory
 on your `PATH`. The archives have no publisher signature; macOS binaries are not
@@ -34,18 +34,18 @@ library.
 Install the CLI with Go:
 
 ```sh
-go install github.com/firmdura/bootlog-check/cmd/bootlog-check@v1.0.8
+go install github.com/firmdura/bootlog-check/cmd/bootlog-check@v1.1.0
 ```
 
 The executable goes into `GOBIN`, or `$(go env GOPATH)/bin` when `GOBIN` is unset.
-Add that directory to your `PATH`. `@v1.0.8` selects this release, and
-`bootlog-check --version` prints `bootlog-check 1.0.8`. The repository is public;
+Add that directory to your `PATH`. `@v1.1.0` selects this release, and
+`bootlog-check --version` prints `bootlog-check 1.1.0`. The repository is public;
 no GitHub credentials or private-module configuration are needed.
 
 To build and verify a source checkout instead, run:
 
 ```sh
-git clone --branch v1.0.8 https://github.com/firmdura/bootlog-check.git
+git clone --branch v1.1.0 https://github.com/firmdura/bootlog-check.git
 cd bootlog-check
 ./scripts/verify.sh
 ./bin/bootlog-check --help
@@ -88,7 +88,11 @@ timestamp. The checker reads the entire file, including any messages after
 `APP_READY`. Reports include the first message that matched each check, so
 handle reports with the same care as the source log.
 
-Put all flags before the log path. Exit code **0** means every check passed;
+To validate `rules.json` before a capture is available, run
+`./bin/bootlog-check --check-rules rules.json`. It exits 0 silently for valid
+rules or 2 with a diagnostic on stderr. It does not evaluate a boot.
+
+When checking a log, put all flags before its path. Exit code **0** means every check passed;
 **1** means the report is complete but contains failed checks. Exit code **2**
 means the command could not complete because of an argument, input, or
 operational error. Error messages go to stderr. Errors before report writing

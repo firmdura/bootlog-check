@@ -38,6 +38,10 @@ filename that begins with `-`. When checking a log, supply `--rules FILE`, and
 quote paths that contain spaces. `--format` accepts `text` (the default),
 `json`, or `junit`.
 
+If you only have the rule file, run `bootlog-check --check-rules rules.json`
+without a log or other flags. Valid rules exit 0 without a report; invalid
+rules exit 2 with a diagnostic on stderr.
+
 The three limit flags accept positive ASCII decimal integers up to
 9,223,372,036,854,775,807; type the digits without commas. Signs, fractions,
 exponents, hexadecimal notation, and zero are invalid. Leading zeros still mean

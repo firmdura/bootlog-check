@@ -16,7 +16,7 @@ import (
 )
 
 // Version is the command's release version.
-const Version = "1.0.8"
+const Version = "1.1.0"
 
 // File is a caller-supplied input file. Run checks that Stat describes a regular
 // file and closes each successfully opened input, including on errors.
@@ -36,13 +36,15 @@ type Streams struct {
 }
 
 const help = `Usage: bootlog-check --rules FILE [flags] LOG
+       bootlog-check --check-rules FILE
 
 Check one saved UTF-8 boot log against strict JSON rules. Inputs must be local
 regular files; stdin, URLs, archives, and device ports are unsupported.
 All flags precede the single log path. Use -- before a path beginning with '-'.
 
 Flags:
-  --rules FILE          Required strict JSON rule file (schema_version 1)
+  --rules FILE          Strict JSON rule file for checking a log (schema_version 1)
+  --check-rules FILE    Validate rules only; no other flags, log, or report
   --format FORMAT       text (default), json, or junit
   --max-input-bytes N   Raw log bytes, including terminators (default 16777216)
   --max-lines N         Physical log lines, including empty lines (default 100000)
@@ -53,7 +55,8 @@ Flags:
 Limits must be positive decimal integers fitting signed 64-bit values.
 The entire log is validated through EOF before a report is written.
 Redirect stdout to save a report; operational diagnostics go to stderr.
-Exit 0: checks pass (or help/version). Exit 1: complete report with failed checks.
+Exit 0: checks pass, rules alone are valid, or help/version was requested.
+Exit 1: complete report with failed checks.
 Exit 2: invalid usage/input, limits, cancellation, or I/O/output failure.
 Output failure can leave a partial report; discard that incomplete artifact.
 A pass describes only the supplied capture, not capture completeness or device
@@ -78,11 +81,18 @@ func Run(ctx context.Context, args []string, streams Streams) int {
 		return fail(errors.New("stdout writer is required"))
 	}
 	var rulesPath, format string
-	var showHelp, showVersion bool
+	var checkRules, showHelp, showVersion bool
 	var opts bootlog.ParseOptions
 	fs := flag.NewFlagSet("bootlog-check", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 	fs.StringVar(&rulesPath, "rules", "", "rules file")
+	fs.Func("check-rules", "validate one rules file without a log", func(path string) error {
+		if checkRules {
+			return errors.New("supply only one rules file")
+		}
+		rulesPath, checkRules = path, true
+		return nil
+	})
 	fs.StringVar(&format, "format", string(report.Text), "report format")
 	fs.BoolVar(&showHelp, "help", false, "show help")
 	fs.BoolVar(&showHelp, "h", false, "show help")
@@ -92,6 +102,9 @@ func Run(ctx context.Context, args []string, streams Streams) int {
 	fs.Var(positiveLimit{&opts.MaxLineBytes}, "max-line-bytes", "positive decimal bytes")
 	if err := fs.Parse(args); err != nil {
 		return fail(err)
+	}
+	if checkRules && (rulesPath == "" || fs.NArg() != 0 || fs.NFlag() != 1) {
+		return fail(errors.New("use --check-rules FILE without a log or other flags"))
 	}
 	if showHelp || showVersion {
 		output := help
@@ -103,7 +116,7 @@ func Run(ctx context.Context, args []string, streams Streams) int {
 		}
 		return 0
 	}
-	if rulesPath == "" || fs.NArg() != 1 {
+	if !checkRules && (rulesPath == "" || fs.NArg() != 1) {
 		return fail(errors.New("require --rules FILE and exactly one LOG; flags must precede LOG (see --help)"))
 	}
 	if format != string(report.Text) && format != string(report.JSON) && format != string(report.JUnit) {
@@ -126,6 +139,12 @@ func Run(ctx context.Context, args []string, streams Streams) int {
 	cfg, parseErr := bootlog.ParseRules(contextReader{ctx, ruleFile})
 	if err := errors.Join(parseErr, ruleFile.Close()); err != nil {
 		return fail(fmt.Errorf("read rules: %w", err))
+	}
+	if checkRules {
+		if err := ctx.Err(); err != nil {
+			return fail(err)
+		}
+		return 0
 	}
 	rules, err := bootlog.CompileRules(cfg)
 	if err != nil {

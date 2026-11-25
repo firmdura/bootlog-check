@@ -209,6 +209,23 @@ type cancelOnClose struct {
 
 func (f cancelOnClose) Close() error { f.cancel(); return f.inputFile.Close() }
 
+func TestRunCheckRulesCanceledOnClose(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	rules, _ := inputs()
+	var out, stderr bytes.Buffer
+	streams := Streams{Stdout: &out, Stderr: &stderr, Open: func(path string) (File, error) {
+		if path != "rules" {
+			t.Fatalf("unexpected input %q", path)
+		}
+		return cancelOnClose{rules, cancel}, nil
+	}}
+	code := Run(ctx, []string{"--check-rules", "rules"}, streams)
+	if code != 2 || rules.closed != 1 || out.Len() != 0 || !strings.Contains(stderr.String(), "context canceled") {
+		t.Fatalf("code=%d closed=%d stdout=%q stderr=%q", code, rules.closed, out.String(), stderr.String())
+	}
+}
+
 func TestRunInvalidDependencies(t *testing.T) {
 	for _, tc := range []struct {
 		name string

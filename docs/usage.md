@@ -1,6 +1,6 @@
 # Saved-log and CLI guide
 
-This guide explains how to use the v1.0 command-line tool. Start with the
+This guide explains how to check a saved log with bootlog-check. Start with the
 [quickstart](../README.md#quickstart) for a complete rules file and saved
 capture.
 
@@ -151,15 +151,22 @@ numbers, and negative deadlines are invalid.
 
 ```text
 bootlog-check --rules FILE [flags] LOG
+bootlog-check --check-rules FILE
 ```
 
 Put all flags before the single log path. Both inputs must be local regular
 files. The tool cannot read from standard input (`-`), URLs, compressed
 archives, directories, or device ports. Use shell redirection to save reports.
 
+Use `--check-rules FILE` on its own to check a rules edit before collecting a
+log. It applies the same JSON, rule, size, and regular-expression checks as a
+normal invocation. Valid rules produce no output and exit 0; errors go to
+stderr and exit 2. Success says nothing about whether the rules match a boot.
+
 | Flag | Default | Meaning |
 | --- | --- | --- |
-| `--rules FILE` | Required | Strict version 1 JSON rule file |
+| `--rules FILE` | Required for a log check | Strict version 1 JSON rule file |
+| `--check-rules FILE` | | Validate a rules file without checking a log |
 | `--format text\|json\|junit` | `text` | Report encoding |
 | `--max-input-bytes N` | `16777216` | Maximum raw log bytes, including terminators |
 | `--max-lines N` | `100000` | Maximum physical lines, including empty ones |

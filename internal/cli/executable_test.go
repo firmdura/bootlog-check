@@ -42,6 +42,27 @@ func TestExecutable(t *testing.T) {
 	t.Run("report-states", func(t *testing.T) { testExecutableReports(t, binary) })
 	t.Run("operational-errors", func(t *testing.T) { testExecutableErrors(t, binary) })
 	t.Run("help-version", func(t *testing.T) { testExecutableInformation(t, binary) })
+	t.Run("check-rules", func(t *testing.T) {
+		rules, log := executableFiles(t, executableRules, "[0] START\n")
+		code, stdout, stderr := executableRun(t, binary, "--check-rules", rules)
+		if code != 0 || stdout != "" || stderr != "" {
+			t.Fatalf("valid rules: code=%d stdout=%q stderr=%q; want silent success", code, stdout, stderr)
+		}
+		bad, _ := executableFiles(t, strings.Replace(executableRules, "^READY$", "[", 1), "")
+		code, stdout, stderr = executableRun(t, binary, "--check-rules", bad)
+		if code != 2 || stdout != "" || !strings.Contains(stderr, "milestones[0].pattern") {
+			t.Fatalf("invalid pattern: code=%d stdout=%q stderr=%q", code, stdout, stderr)
+		}
+		for _, args := range [][]string{
+			{"--check-rules"}, {"--check-rules", "-"},
+			{"--check-rules", rules, log}, {"--rules", rules, "--check-rules", rules},
+			{"--version", "--check-rules", bad},
+			{"--check-rules", rules, "--format", "json"}, {"--check-rules", rules, "--max-lines", "10"},
+			{"--check-rules", bad, "--check-rules", rules},
+		} {
+			assertExecutableError(t, binary, args...)
+		}
+	})
 	t.Run("equivalence-and-composition", func(t *testing.T) { testExecutableEquivalence(t, binary) })
 	t.Run("local-paths-and-limits", func(t *testing.T) { testExecutableLocalPaths(t, binary) })
 	t.Run("broken-output-pipe", func(t *testing.T) {
@@ -205,7 +226,7 @@ func testExecutableInformation(t *testing.T, binary string) {
 				t.Fatalf("code=%d stdout=%q stderr=%q; want informational success", code, stdout, stderr)
 			}
 			if flag != "--version" {
-				for _, phrase := range []string{"--rules", "--format", "--max-input-bytes", "--max-lines", "--max-line-bytes", "--help", "--version", "text", "json", "junit"} {
+				for _, phrase := range []string{"--rules", "--check-rules", "--format", "--max-input-bytes", "--max-lines", "--max-line-bytes", "--help", "--version", "text", "json", "junit"} {
 					if !strings.Contains(stdout, phrase) {
 						t.Errorf("help omits %q", phrase)
 					}
